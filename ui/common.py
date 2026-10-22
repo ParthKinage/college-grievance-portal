@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from src import database
+from src.clock import now
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
@@ -76,5 +77,5 @@ def tickets_dataframe():
     df["created_at"] = pd.to_datetime(df["created_at"])
     # Deadline = time submitted + SLA hours. Overdue = past the deadline and not resolved.
     df["due_at"] = df["created_at"] + pd.to_timedelta(df["sla_hours"], unit="h")
-    df["overdue"] = (df["status"] != "Resolved") & (df["due_at"] < pd.Timestamp.now())
+    df["overdue"] = (df["status"] != "Resolved") & (df["due_at"] < pd.Timestamp(now()))
     return df

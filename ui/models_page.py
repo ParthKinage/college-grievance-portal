@@ -7,6 +7,7 @@ import joblib
 import pandas as pd
 import streamlit as st
 
+from src.clock import from_timestamp
 from src.explain import explain_prediction, top_words
 from src.predict import analyze_complaint, load_models
 from src.preprocess import clean_text
@@ -74,7 +75,7 @@ def saved_models_tab(info):
                 "file": rel,
                 "role": FILE_ROLES.get(rel, ""),
                 "size_kb": round(os.path.getsize(path) / 1024, 1),
-                "modified": datetime.fromtimestamp(os.path.getmtime(path)),
+                "modified": from_timestamp(os.path.getmtime(path)),
             })
     st.dataframe(pd.DataFrame(files).sort_values("file"), hide_index=True, width="stretch",
                  column_config={

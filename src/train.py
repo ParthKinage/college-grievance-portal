@@ -17,7 +17,6 @@ Run from the project root:
 import json
 import os
 import re
-from datetime import datetime
 
 import joblib
 import matplotlib
@@ -40,6 +39,7 @@ from sklearn.model_selection import cross_val_score, train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 
+from src.clock import now
 from src.preprocess import clean_text
 
 # All paths are built from the project root, so nothing is hard-coded
@@ -155,7 +155,7 @@ def save_model_info(df, train_df, test_df, vectorizer, results, winner, best_mod
                     final_accuracy, priority_model, priority_accuracy):
     """Write models/model_info.json: a readable description of every saved model."""
     info = {
-        "trained_at": datetime.now().isoformat(timespec="seconds"),
+        "trained_at": now().isoformat(timespec="seconds"),
         "scikit_learn_version": sklearn.__version__,
         "dataset": {
             "rows": len(df),

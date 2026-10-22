@@ -1,11 +1,12 @@
 """Student page: submit a grievance and see where the AI sends it, and why."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pandas as pd
 import streamlit as st
 
 from src import database
+from src.clock import now
 from src.explain import explain_prediction
 from src.predict import analyze_complaint, load_models
 from ui.common import badge, bar_chart, page_header, priority_badge
@@ -119,7 +120,7 @@ def render():
                 sla_hours=result["sla_hours"],
             )
             # Keep the result so it stays on screen after Streamlit reruns the script
-            st.session_state["last_ticket"] = (ticket_id, text, result, datetime.now())
+            st.session_state["last_ticket"] = (ticket_id, text, result, now())
             st.toast(f"Ticket #{ticket_id} created", icon=":material/check_circle:")
 
     with right:

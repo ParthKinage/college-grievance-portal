@@ -7,9 +7,10 @@ realistic grievances. Each one goes through the real AI pipeline, so the
 categories, priorities and offices are genuine model predictions.
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from src import database
+from src.clock import now
 from src.predict import analyze_complaint
 
 # (student name, grievance text, status, how many hours ago it was submitted)
@@ -35,10 +36,10 @@ DEMO_GRIEVANCES = [
 
 def create_demo_tickets():
     """Run every demo grievance through the AI pipeline and save it; return how many were added."""
-    now = datetime.now()
+    current_time = now()
     for name, text, status, hours_ago in DEMO_GRIEVANCES:
         result = analyze_complaint(text)
-        created_at = (now - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
+        created_at = (current_time - timedelta(hours=hours_ago)).isoformat(timespec="seconds")
         ticket_id = database.add_ticket(
             name, text, result["category"], result["confidence"], result["priority"],
             result["department"], result["sla_hours"], created_at=created_at,

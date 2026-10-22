@@ -8,3 +8,4 @@ matplotlib==3.11.2
 streamlit==1.64.0
 altair==6.3.0
 pytest==9.1.1
+tzdata==2026.4  # time zone data, so India time works on any server

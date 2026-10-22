@@ -16,8 +16,9 @@ To browse the file outside the app, open complaints.db in a free tool such as
 import os
 import sqlite3
 from contextlib import closing
-from datetime import datetime
 from pathlib import Path
+
+from src.clock import now
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(PROJECT_ROOT, "complaints.db")
@@ -59,7 +60,7 @@ def add_ticket(student_name, complaint_text, category, confidence, priority, dep
     """Insert a new ticket and return its ID (created_at defaults to now)."""
     init_db()
     if created_at is None:
-        created_at = datetime.now().isoformat(timespec="seconds")
+        created_at = now().isoformat(timespec="seconds")
     with closing(get_connection()) as conn, conn:
         cursor = conn.execute(
             """INSERT INTO tickets
