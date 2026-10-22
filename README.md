@@ -1,5 +1,7 @@
 # College Grievance Portal: Smart Complaint Classification and Routing System
 
+**Live demo:** [https://college-grievance-app-edmhv6dyxtqyg2pffwghiq.streamlit.app/](https://college-grievance-app-edmhv6dyxtqyg2pffwghiq.streamlit.app/)
+
 A web portal where a student types a grievance in plain English, and an AI system decides what it is
 about, how urgent it is, and which college office should handle it. A machine learning model
 (TF-IDF + Linear SVM) classifies the grievance into one of six categories, a second model plus
