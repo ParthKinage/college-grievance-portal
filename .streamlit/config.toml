@@ -1,0 +1,11 @@
+# Streamlit settings (read automatically when you run "streamlit run app.py" from this folder)
+
+[theme]
+primaryColor = "#4F46E5"   # indigo accent for buttons, links and charts
+baseRadius = "medium"      # rounded corners
+
+[client]
+toolbarMode = "minimal"    # hide developer menu items for a cleaner look
+
+[browser]
+gatherUsageStats = false

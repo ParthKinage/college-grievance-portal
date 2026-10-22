@@ -1,0 +1,33 @@
+{
+  "models": {
+    "Naive Bayes": {
+      "accuracy": 0.9083,
+      "precision_macro": 0.9102,
+      "recall_macro": 0.9084,
+      "f1_macro": 0.9086,
+      "cv_accuracy_mean": 0.9198,
+      "cv_accuracy_std": 0.0089
+    },
+    "Logistic Regression": {
+      "accuracy": 0.8979,
+      "precision_macro": 0.9005,
+      "recall_macro": 0.898,
+      "f1_macro": 0.8984,
+      "cv_accuracy_mean": 0.9161,
+      "cv_accuracy_std": 0.0173
+    },
+    "Linear SVM": {
+      "accuracy": 0.9125,
+      "precision_macro": 0.913,
+      "recall_macro": 0.9126,
+      "f1_macro": 0.9126,
+      "cv_accuracy_mean": 0.9214,
+      "cv_accuracy_std": 0.0154
+    }
+  },
+  "winner": "Linear SVM",
+  "saved_category_model_accuracy": 0.9125,
+  "priority_model_accuracy": 0.8896,
+  "train_size": 1920,
+  "test_size": 480
+}

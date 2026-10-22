@@ -1,0 +1,15 @@
+# Python cache files
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Local ticket database (created automatically when the app runs)
+complaints.db
+
+# OS files
+.DS_Store
+Thumbs.db

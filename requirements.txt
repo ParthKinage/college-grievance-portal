@@ -1,0 +1,10 @@
+# Exact versions: the saved models in models/ were trained with scikit-learn 1.9.1,
+# and a different version may fail to load them. Pinning keeps local and cloud identical.
+pandas==3.0.6
+numpy==2.5.3
+scikit-learn==1.9.1
+joblib==1.6.0
+matplotlib==3.11.2
+streamlit==1.64.0
+altair==6.3.0
+pytest==9.1.1
