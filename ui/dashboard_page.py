@@ -69,19 +69,28 @@ def render():
     if statuses:
         filtered = filtered[filtered["status"].isin(statuses)]
 
-    st.dataframe(
+    st.caption(":material/edit: Click a ticket's **Status** cell to change it to Open, "
+               "In Progress or Resolved. The change is saved straight away.")
+
+    # The editor remembers edits by row position, so it gets a fresh key whenever the
+    # filters change; otherwise an old edit could land on a different ticket.
+    editor_key = f"tickets_{st.session_state.get('editor_round', 0)}_{search}_{offices}_{priorities}_{statuses}"
+    edited = st.data_editor(
         filtered,
+        key=editor_key,
         hide_index=True,
         width="stretch",
         column_order=["id", "student_name", "category", "priority", "department", "status",
                       "overdue", "due_at", "confidence", "created_at", "complaint_text"],
+        disabled=[c for c in filtered.columns if c != "status"],   # only Status is editable
         column_config={
             "id": st.column_config.NumberColumn("ID", width="small"),
             "student_name": "Student",
             "category": "Category",
             "priority": "Priority",
             "department": "Office",
-            "status": "Status",
+            "status": st.column_config.SelectboxColumn(
+                "Status ✎", options=database.VALID_STATUSES, required=True),
             "overdue": st.column_config.CheckboxColumn("Overdue", width="small"),
             "due_at": st.column_config.DatetimeColumn("Due by", format="DD MMM, HH:mm"),
             "confidence": st.column_config.ProgressColumn(
@@ -90,22 +99,19 @@ def render():
             "complaint_text": st.column_config.TextColumn("Grievance", width="large"),
         },
     )
+
+    # Save every row whose status was changed in the table
+    changed = edited[edited["status"] != filtered["status"]]
+    if not changed.empty:
+        for row in changed.itertuples():
+            database.update_status(int(row.id), row.status)
+        names = ", ".join(f"#{row.id} → {row.status}" for row in changed.itertuples())
+        st.toast(f"Saved: {names}", icon=":material/check_circle:")
+        # New editor key, so the saved edits are not applied again on the next run
+        st.session_state["editor_round"] = st.session_state.get("editor_round", 0) + 1
+        st.rerun()  # reload so the KPIs, charts and overdue flags use the new status
+
     left, right = st.columns([3, 1])
     left.caption(f"Showing {len(filtered)} of {len(df)} tickets.")
     right.download_button("Download CSV", filtered.to_csv(index=False), "tickets.csv",
                           "text/csv", icon=":material/download:", width="stretch")
-
-    # --- Status update -------------------------------------------------------
-    with st.container(border=True):
-        st.markdown("**:material/edit: Update a ticket**")
-        c1, c2, c3 = st.columns([3, 3, 1], vertical_alignment="bottom")
-        labels = {row.id: f"#{row.id} · {row.category} · {row.student_name}"
-                  for row in df.itertuples()}
-        ticket_id = c1.selectbox("Ticket", list(labels), format_func=labels.get)
-        current = df.loc[df["id"] == ticket_id, "status"].iloc[0]
-        new_status = c2.segmented_control("New status", database.VALID_STATUSES,
-                                          default=current, key=f"status_{ticket_id}")
-        if c3.button("Save", type="primary", width="stretch") and new_status:
-            database.update_status(int(ticket_id), new_status)
-            st.toast(f"Ticket #{ticket_id} set to {new_status}", icon=":material/check_circle:")
-            st.rerun()  # reload so the table and KPIs show the new status
