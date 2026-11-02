@@ -30,13 +30,15 @@ def render():
 
     # --- KPI tiles ---------------------------------------------------------
     active = df[df["status"] != "Resolved"]
-    k1, k2, k3, k4 = st.columns(4)
+    resolved = df[df["status"] == "Resolved"]
+    k1, k2, k3, k4, k5 = st.columns(5)
     k1.metric("Total tickets", len(df), border=True)
     k2.metric("Open", int((df["status"] == "Open").sum()),
               help="Not yet picked up by an office", border=True)
     k3.metric("High priority (active)", int((active["priority"] == "High").sum()), border=True)
     k4.metric("Overdue", int(df["overdue"].sum()),
               help="Past the response deadline and not resolved", border=True)
+    k5.metric("Resolved", len(resolved), border=True)
 
     # --- Charts --------------------------------------------------------------
     stats = database.get_stats()
@@ -48,41 +50,68 @@ def render():
         st.markdown("**Tickets per office**")
         st.altair_chart(counts_chart(stats["by_department"]), width="stretch")
 
-    # --- Ticket table with filters ------------------------------------------
-    st.subheader("All tickets")
-    f1, f2, f3, f4 = st.columns([2, 2, 1, 1])
+    # --- Filters (apply to both sections) ------------------------------------
+    st.subheader("Tickets")
+    f1, f2, f3 = st.columns([2, 2, 1])
     search = f1.text_input("Search", placeholder="Name or words in the grievance",
                            icon=":material/search:")
     offices = f2.multiselect("Office", sorted(df["department"].unique()))
     priorities = f3.multiselect("Priority", ["High", "Medium", "Low"])
-    statuses = f4.multiselect("Status", database.VALID_STATUSES)
+    filtered = apply_filters(df, search, offices, priorities)
+    filter_sig = f"{search}_{offices}_{priorities}"
 
-    filtered = df
+    # --- Two sections: work still to do, and work that is finished ------------
+    tab_active, tab_resolved = st.tabs([":material/pending_actions: Active tickets",
+                                        ":material/task_alt: Resolved tickets"])
+    with tab_active:
+        rows = filtered[filtered["status"] != "Resolved"]
+        # Most urgent first: overdue tickets, then the nearest deadline
+        rows = rows.sort_values(["overdue", "due_at"], ascending=[False, True])
+        st.caption(f"{len(rows)} open or in-progress tickets, most urgent first. "
+                   "Set a ticket's **Status** to Resolved to move it to the Resolved section.")
+        ticket_table(rows, "active", filter_sig, show_overdue=True)
+    with tab_resolved:
+        rows = filtered[filtered["status"] == "Resolved"]
+        st.caption(f"{len(rows)} resolved tickets, newest first. "
+                   "Change a **Status** back to Open or In Progress to reopen a ticket.")
+        ticket_table(rows, "resolved", filter_sig, show_overdue=False)
+
+
+def apply_filters(df, search, offices, priorities):
+    """Keep only the tickets that match the search box and the selected filters."""
     if search:
-        text_match = (filtered["complaint_text"].str.contains(search, case=False, regex=False)
-                      | filtered["student_name"].str.contains(search, case=False, regex=False))
-        filtered = filtered[text_match]
+        text_match = (df["complaint_text"].str.contains(search, case=False, regex=False)
+                      | df["student_name"].str.contains(search, case=False, regex=False))
+        df = df[text_match]
     if offices:  # an empty selection means "show everything"
-        filtered = filtered[filtered["department"].isin(offices)]
+        df = df[df["department"].isin(offices)]
     if priorities:
-        filtered = filtered[filtered["priority"].isin(priorities)]
-    if statuses:
-        filtered = filtered[filtered["status"].isin(statuses)]
+        df = df[df["priority"].isin(priorities)]
+    return df
 
-    st.caption(":material/edit: Click a ticket's **Status** cell to change it to Open, "
-               "In Progress or Resolved. The change is saved straight away.")
+
+def ticket_table(rows, section, filter_sig, show_overdue):
+    """Editable ticket table: only the Status column can change, and changes save at once."""
+    if rows.empty:
+        st.info("No tickets here yet." if not filter_sig.strip("_[]")
+                else "No tickets match these filters.", icon=":material/inbox:")
+        return
+
+    columns = ["id", "student_name", "category", "priority", "department", "status",
+               "overdue", "due_at", "confidence", "created_at", "complaint_text"]
+    if not show_overdue:
+        columns.remove("overdue")   # a resolved ticket can never be overdue
 
     # The editor remembers edits by row position, so it gets a fresh key whenever the
-    # filters change; otherwise an old edit could land on a different ticket.
-    editor_key = f"tickets_{st.session_state.get('editor_round', 0)}_{search}_{offices}_{priorities}_{statuses}"
+    # rows change (filters or a save); otherwise an old edit could land on another ticket.
+    key = f"{section}_{st.session_state.get('editor_round', 0)}_{filter_sig}"
     edited = st.data_editor(
-        filtered,
-        key=editor_key,
+        rows,
+        key=key,
         hide_index=True,
         width="stretch",
-        column_order=["id", "student_name", "category", "priority", "department", "status",
-                      "overdue", "due_at", "confidence", "created_at", "complaint_text"],
-        disabled=[c for c in filtered.columns if c != "status"],   # only Status is editable
+        column_order=columns,
+        disabled=[c for c in rows.columns if c != "status"],   # only Status is editable
         column_config={
             "id": st.column_config.NumberColumn("ID", width="small"),
             "student_name": "Student",
@@ -101,17 +130,16 @@ def render():
     )
 
     # Save every row whose status was changed in the table
-    changed = edited[edited["status"] != filtered["status"]]
+    changed = edited[edited["status"] != rows["status"]]
     if not changed.empty:
         for row in changed.itertuples():
             database.update_status(int(row.id), row.status)
         names = ", ".join(f"#{row.id} → {row.status}" for row in changed.itertuples())
         st.toast(f"Saved: {names}", icon=":material/check_circle:")
-        # New editor key, so the saved edits are not applied again on the next run
+        # New editor keys, so the saved edits are not applied again on the next run
         st.session_state["editor_round"] = st.session_state.get("editor_round", 0) + 1
-        st.rerun()  # reload so the KPIs, charts and overdue flags use the new status
+        st.rerun()  # reload so tickets move section and the KPIs and charts update
 
-    left, right = st.columns([3, 1])
-    left.caption(f"Showing {len(filtered)} of {len(df)} tickets.")
-    right.download_button("Download CSV", filtered.to_csv(index=False), "tickets.csv",
-                          "text/csv", icon=":material/download:", width="stretch")
+    st.download_button(f"Download {section} tickets (CSV)", rows.to_csv(index=False),
+                       f"{section}_tickets.csv", "text/csv", icon=":material/download:",
+                       key=f"download_{section}")
